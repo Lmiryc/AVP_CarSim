@@ -30,7 +30,7 @@ struct CarSimulationView: View {
     let viewingOffset: SIMD3<Float> = [0, -0.5, -3]
     
     // 汽车颜色：这里可直接改成你想要的颜色
-    let carColor: UIColor = .systemRed
+    let carColor: UIColor = .systemYellow
 
     var body: some View {
         // ImmersiveSpace 里只放 RealityView，没有 2D 面板遮挡
