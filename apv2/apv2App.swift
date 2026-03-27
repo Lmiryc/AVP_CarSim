@@ -19,6 +19,12 @@ struct apv2App: App {
                 .environment(appModel)
         }.defaultSize(width: 400, height: 250)
 
+        // VX 显示窗口：独立窗口
+        WindowGroup(id: "VXDisplay") {
+            VXDisplayView()
+                .environment(appModel)
+        }.defaultSize(width: 200, height: 180)
+
         // 沉浸空间：无边界，3D 汽车可以自由移动
         ImmersiveSpace(id: "CarSimSpace") {
             CarSimulationView()

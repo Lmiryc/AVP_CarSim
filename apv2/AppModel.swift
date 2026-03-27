@@ -22,4 +22,7 @@ class AppModel {
     // 仿真控制：ControlPanelView 设为 true，CarSimulationView 消费后重置
     var shouldStartAnimation: Bool = false
     var isAnimating: Bool = false
+    
+    // 当前 VX 值（用于显示）
+    var currentVX: Float = 0.0
 }

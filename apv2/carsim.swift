@@ -8,11 +8,13 @@
 import SwiftUI
 import RealityKit
 import simd
+import ARKit
 
 struct CarFrame {
     var time: Double
     var position: SIMD3<Float>
     var rotation: simd_quatf
+    var vx: Float  // 速度值
 }
 
 struct CarSimulationView: View {
@@ -20,16 +22,47 @@ struct CarSimulationView: View {
 
     @State private var trajectoryAnchor = Entity()
     @State private var mapAnchor = Entity()
+    @State private var planeAnchor: AnchorEntity?
     @State private var frames: [CarFrame] = []
     @State private var isPlaying = false
 
     // 比例尺：0.01 = 真实1米 → 虚拟1厘米。调大让车更大（比如0.02 = 放大2倍）
     //let scaleFactor: Float = 0.1
+    // ===== 全局缩放系数 =====
+    let globalScale: Float = 0.35  // 调整这个值来缩放所有内容（车、轨道、速度等）
+    
     // 1. 赛道与轨迹的比例（比如你想缩小赛道，就调小这个值，确保道路和路线匹配）
     let trackScale: Float = 0.357 
     
     // 2. 汽车模型的比例（独立控制车的大小，不管赛道怎么变，车都是这么大）
-    let carScale: Float = 0.1     
+    let carScale: Float = 0.1
+    
+    // 3. Road 的轴向缩放系数（独立调整，找出哪个轴是长度）
+    //    如果调整 X/Y/Z 都不改变长度，说明模型几何体本身的问题
+    let roadScaleX: Float = 0.045  // 试试调这个看是否改变长度
+    let roadScaleY: Float = 0.045  // 或者这个
+    let roadScaleZ: Float = 0.079  // 或者这个
+    
+    // 计算实际使用的缩放值
+    var effectiveTrackScale: Float {
+        return trackScale * globalScale
+    }
+    
+    var effectiveCarScale: Float {
+        return carScale * globalScale
+    }
+    
+    var effectiveRoadScaleX: Float {
+        return roadScaleX * globalScale
+    }
+    
+    var effectiveRoadScaleY: Float {
+        return roadScaleY * globalScale
+    }
+    
+    var effectiveRoadScaleZ: Float {
+        return roadScaleZ * globalScale
+    }     
 
     // 观看偏移... (保留原样)
   
@@ -41,8 +74,14 @@ struct CarSimulationView: View {
     var body: some View {
         // ImmersiveSpace 里只放 RealityView，没有 2D 面板遮挡
         RealityView { content in
-            content.add(trajectoryAnchor)
-            content.add(mapAnchor)
+            // 创建平面锚点，将所有内容放在检测到的平面上
+            let planeAnchor = AnchorEntity(plane: .horizontal)
+            self.planeAnchor = planeAnchor
+            content.add(planeAnchor)
+            
+            // 将轨迹和地图锚点添加到平面锚点
+            planeAnchor.addChild(trajectoryAnchor)
+            planeAnchor.addChild(mapAnchor)
 
             if let road = try? await Entity(named: "road") {
                 road.position = viewingOffset
@@ -53,9 +92,7 @@ struct CarSimulationView: View {
 
                 // 2. 将它们相乘来叠加效果，然后赋值
                 road.transform.rotation = rotationY * rotationX * rotationsth
-                //let roadScale: Float = 0.357
-                let mapScale: Float = 0.357
-                road.scale = [mapScale*trackScale, mapScale*trackScale, mapScale*trackScale]
+                road.scale = [effectiveRoadScaleX, effectiveRoadScaleY, effectiveRoadScaleZ]
                 mapAnchor.addChild(road)
             }
 
@@ -64,7 +101,7 @@ struct CarSimulationView: View {
                 let flatRotation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
                 let headingRotation = simd_quatf(angle: .pi , axis: [0, 0, 1])
                 model.transform.rotation = flatRotation * headingRotation
-                model.scale = [carScale, carScale, carScale]
+                model.scale = [effectiveCarScale, effectiveCarScale, effectiveCarScale]
                 trajectoryAnchor.addChild(model)
                 loadCSVData()
             }
@@ -165,6 +202,8 @@ struct CarSimulationView: View {
             let yawDeg = (yawIdx != nil && columns.count > yawIdx!) ? (Float(columns[yawIdx!]) ?? 0) : 0
             let pitchDeg = (pitchIdx != nil && columns.count > pitchIdx!) ? (Float(columns[pitchIdx!]) ?? 0) : 0
             let rollDeg = (rollIdx != nil && columns.count > rollIdx!) ? (Float(columns[rollIdx!]) ?? 0) : 0
+            // 提取 VX 值
+            let vxValue = (vxIdx != nil && columns.count > vxIdx!) ? (Float(columns[vxIdx!]) ?? 0) : 0
 
             let carX: Float
             let carY: Float
@@ -188,7 +227,7 @@ struct CarSimulationView: View {
                     let dt = max(0, Float(time - previousTime))
                     let yawRadForPath = yawDeg * .pi / 180.0
                     let speedMS = vx / 3.6 // 如果你的 vx 原本就是 m/s，请忽略除以 3.6
-                    let stepDistance = speedMS * trackScale * dt
+                    let stepDistance = speedMS * effectiveTrackScale * dt
                     inferredCarX += stepDistance * cos(yawRadForPath)
                     inferredCarY += stepDistance * sin(yawRadForPath)
                 }
@@ -200,9 +239,9 @@ struct CarSimulationView: View {
             }
             lastTime = time
 
-            let realityX = -carY * trackScale
-            let realityY = carZ * trackScale
-            let realityZ = -carX * trackScale
+            let realityX = -carY * effectiveTrackScale
+            let realityY = carZ * effectiveTrackScale
+            let realityZ = -carX * effectiveTrackScale
             let position = SIMD3<Float>(realityX, realityY, realityZ)
 
             let yawRad = yawDeg * .pi / 180.0
@@ -214,7 +253,7 @@ struct CarSimulationView: View {
             let qRoll = simd_quatf(angle: rollRad, axis: [0, 0, 1])
             let rotation = qYaw * qPitch * qRoll
 
-            parsedFrames.append(CarFrame(time: time, position: position, rotation: rotation))
+            parsedFrames.append(CarFrame(time: time, position: position, rotation: rotation, vx: vxValue))
         }
 
         if let first = parsedFrames.first {
@@ -223,8 +262,16 @@ struct CarSimulationView: View {
                 CarFrame(
                     time: frame.time,
                     position: (frame.position - originOffset) + viewingOffset,
-                    rotation: frame.rotation
+                    rotation: frame.rotation,
+                    vx: frame.vx
                 )
+            }
+            // 将车的初始位置设置为第一帧的位置和旋转
+            if !self.frames.isEmpty {
+                let firstFrame = self.frames[0]
+                trajectoryAnchor.transform.translation = firstFrame.position
+                trajectoryAnchor.transform.rotation = firstFrame.rotation
+                appModel.currentVX = firstFrame.vx  // 设置初始 VX 值
             }
         } else {
             self.frames = parsedFrames
@@ -255,6 +302,7 @@ struct CarSimulationView: View {
                 
                 trajectoryAnchor.transform.translation = targetFrame.position
                 trajectoryAnchor.transform.rotation = targetFrame.rotation
+                appModel.currentVX = targetFrame.vx  // 更新 VX 显示
                 
                 frameIndex += 1
             }
