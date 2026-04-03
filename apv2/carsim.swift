@@ -97,7 +97,7 @@ struct CarSimulationView: View {
             }
 
             if let model = try? await Entity(named: "carframe") {
-                applyColor(to: model, color: carColor)
+                //applyColor(to: model, color: carColor)
                 let flatRotation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
                 let headingRotation = simd_quatf(angle: .pi , axis: [0, 0, 1])
                 model.transform.rotation = flatRotation * headingRotation

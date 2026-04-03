@@ -8,7 +8,9 @@ struct VisualizationScreenView: View {
     let parameterRows: [(String, String)]
     let onReturn: () -> Void
 
-    @State private var samples: [TelemetrySample] = TelemetryLoader.loadRaceSamples()
+    @State private var allSamples: [TelemetrySample] = TelemetryLoader.loadRaceSamples()
+    @State private var visibleSamples: [TelemetrySample] = []
+    @State private var playbackTask: Task<Void, Never>?
 
     var body: some View {
         VStack {
@@ -21,12 +23,12 @@ struct VisualizationScreenView: View {
                 ScrollView(.vertical) {
                     VStack(spacing: 16) {
                         VisualizationTopGrid(
-                            samples: samples,
+                            samples: visibleSamples,
                             appModel: appModel,
                             parameterRows: parameterRows
                         )
 
-                        VisualizationBottomRow(samples: samples)
+                        VisualizationBottomRow(samples: visibleSamples)
                     }
                     .padding(.horizontal, 28)
                     .padding(.bottom, 28)
@@ -40,9 +42,36 @@ struct VisualizationScreenView: View {
         .onAppear {
             // Ensure old floating HUD is hidden while telemetry screen is active.
             dismissWindow(id: "VXDisplay")
+            startTelemetryPlayback()
         }
         .onDisappear {
+            playbackTask?.cancel()
+            playbackTask = nil
             dismissWindow(id: "VXDisplay")
+        }
+    }
+
+    private func startTelemetryPlayback() {
+        playbackTask?.cancel()
+        visibleSamples = []
+
+        guard !allSamples.isEmpty else { return }
+        visibleSamples = [allSamples[0]]
+
+        playbackTask = Task { @MainActor in
+            for index in 1..<allSamples.count {
+                if Task.isCancelled { return }
+
+                let previousTime = allSamples[index - 1].time
+                let currentTime = allSamples[index].time
+                let dt = max(0.005, currentTime - previousTime)
+                let waitNs = UInt64(dt * 1_000_000_000)
+
+                try? await Task.sleep(nanoseconds: waitNs)
+                if Task.isCancelled { return }
+
+                visibleSamples.append(allSamples[index])
+            }
         }
     }
 }
