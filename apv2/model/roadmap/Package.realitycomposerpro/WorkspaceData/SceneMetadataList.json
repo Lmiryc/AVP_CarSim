@@ -1,3 +1,23 @@
 {
-
+  "3A29C875-9DDB-4F4C-9B6A-623484B031A0" : {
+    "objectMetadataList" : [
+      [
+        "3A29C875-9DDB-4F4C-9B6A-623484B031A0",
+        "Root"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      },
+      [
+        "3A29C875-9DDB-4F4C-9B6A-623484B031A0",
+        "Root",
+        "hicar"
+      ],
+      {
+        "isExpanded" : true,
+        "isLocked" : false
+      }
+    ]
+  }
 }
