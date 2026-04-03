@@ -96,7 +96,7 @@ struct CarSimulationView: View {
                 mapAnchor.addChild(road)
             }
 
-            if let model = try? await Entity(named: "carframe") {
+            if let model = try? await Entity(named: "hicar") {
                 applyColor(to: model, color: carColor)
                 let flatRotation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
                 let headingRotation = simd_quatf(angle: .pi , axis: [0, 0, 1])
