@@ -11,7 +11,18 @@ import SwiftUI
 @MainActor
 @Observable
 class AppModel {
-    let immersiveSpaceID = "ImmersiveSpace"
+    struct SimulationParameterSet {
+        var vehicleMass: Double = 1240
+        var yawInertia: Double = 3350
+        var rollingRadius: Double = 0.30
+        var tireGrip: Double = 0.85
+        var rollingResistance: Double = 0.015
+        var brakeBias: Double = 0.60
+        var brakeResponseTime: Double = 0.25
+        var absEnabled: Bool = false
+    }
+
+    let immersiveSpaceID = "CarSimSpace"
     enum ImmersiveSpaceState {
         case closed
         case inTransition
@@ -25,4 +36,7 @@ class AppModel {
     
     // 当前 VX 值（用于显示）
     var currentVX: Float = 0.0
+
+    // 前端参数页写入的仿真参数快照
+    var simulationParameters = SimulationParameterSet()
 }

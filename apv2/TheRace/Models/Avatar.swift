@@ -1,0 +1,13 @@
+import Foundation
+
+struct Avatar: Identifiable, Hashable {
+    let id: UUID
+    var name: String
+    var isActive: Bool
+
+    init(id: UUID = UUID(), name: String, isActive: Bool = false) {
+        self.id = id
+        self.name = name
+        self.isActive = isActive
+    }
+}
