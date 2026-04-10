@@ -40,7 +40,6 @@ enum WheelPosition: CaseIterable {
 
 struct CarSimulationView: View {
     @Environment(AppModel.self) private var appModel
-
     @State private var trajectoryAnchor = Entity()
     @State private var mapAnchor = Entity()
     @State private var planeAnchor: AnchorEntity?
@@ -132,7 +131,6 @@ struct CarSimulationView: View {
                     }
                 }
             }
-            
             // 键盘按键监听 (Space 键暂停)
             Button(action: {
                 if isPlaying {
@@ -530,11 +528,17 @@ struct CarSimulationView: View {
                 trajectoryAnchor.transform.translation = targetFrame.position
                 trajectoryAnchor.transform.rotation = targetFrame.rotation
                 appModel.currentVX = targetFrame.vx
+                appModel.currentCarPosition = targetFrame.position
+                appModel.currentCarRotation = targetFrame.rotation
                 
                 let dt = Float(max(0, targetFrame.time - previousFrameTime))
+                let wheelRadius: Float = 0.35 // 假设 GT3RS 轮胎半径是 0.35米，你可以微调
+                // 滚动角速度 = 速度 / 半径。转角增量 = 角速度 * dt
+                appModel.currentWheelRoll -= (targetFrame.vx * dt) / wheelRadius
+
                 applyWheelSteering(targetFrame.steering, speedKPH: targetFrame.vx, deltaTime: dt)
                 previousFrameTime = targetFrame.time
-                
+
                 frameIndex += 1
             }
             
