@@ -317,7 +317,21 @@ struct CarSimulationView: View {
     
     private func loadCSVData() {
         print("🔍 1. 开始尝试读取 CSV 文件...")
-        guard let url = Bundle.main.url(forResource: "race", withExtension: "csv") else { return }
+        let mass = 1600, yaw = 2000
+        let massIndex = Int((mass - 1000) / 200)
+        let yawIndex = Int((yaw - 1500) / 500)
+        let fileName = "LastRun\(massIndex)_\(yawIndex)"
+
+        let url =
+            Bundle.main.url(forResource: fileName, withExtension: "csv", subdirectory: "racedataset") ??
+            Bundle.main.url(forResource: fileName, withExtension: "csv") ??
+            Bundle.main.bundleURL.appendingPathComponent("racedataset/\(fileName).csv")
+
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            print("❌ 找不到 CSV 文件: racedataset/\(fileName).csv")
+            return
+        }
+
         guard let content = try? String(contentsOf: url, encoding: .utf8) else { return }
 
         let lines = content.components(separatedBy: .newlines)
