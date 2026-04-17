@@ -35,6 +35,13 @@ struct ControlPanelView: View {
             }
             .disabled(!isSpaceOpen || appModel.isAnimating)
             .buttonStyle(.borderedProminent)
+
+            Button {
+                openWindow(id: "CarDetailWindow")
+            } label: {
+                Label("Third Person View", systemImage: "car.circle.fill")
+            }
+            .buttonStyle(.bordered)
             
             // 关闭应用
             Button(role: .destructive) {

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import simd
 
 /// Maintains app-wide state
 @MainActor

@@ -30,3 +30,5 @@ playground.xcworkspace
 # Keep shared project settings for team collaboration
 !*.xcworkspace/xcshareddata/
 !*.xcodeproj/project.pbxproj
+
+apv2/racedataset
