@@ -13,32 +13,70 @@ struct VisualizationScreenView: View {
     @State private var playbackTask: Task<Void, Never>?
 
     var body: some View {
-        VStack {
-            VStack(spacing: 0) {
-                VisualizationHeaderView(onReturn: onReturn)
-                    .padding(.horizontal, 28)
-                    .padding(.top, 28)
-                    .padding(.bottom, 20)
+        GeometryReader { proxy in
+            let horizontalPadding: CGFloat = 40
+            let headerTopPadding: CGFloat = 28
+            let headerHeight: CGFloat = 84
+            let firstRowTopSpacing: CGFloat = 20
+            let cardSpacing: CGFloat = 16
+            let bottomSpacing: CGFloat = 20
 
-                ScrollView(.vertical) {
-                    VStack(spacing: 16) {
+            let pairCardWidth: CGFloat = 620
+            let fullRowWidth = pairCardWidth * 2 + cardSpacing
+            let fullRowHeight: CGFloat = 260
+            let pairCardHeight: CGFloat = 250
+
+            let gridHeight = fullRowHeight + cardSpacing + pairCardHeight + cardSpacing + pairCardHeight + cardSpacing + pairCardHeight
+            let basePanelWidth: CGFloat = fullRowWidth + horizontalPadding * 2
+            let basePanelHeight: CGFloat = headerTopPadding + headerHeight + firstRowTopSpacing + gridHeight + bottomSpacing
+
+            let horizontalInset: CGFloat = 24
+            let verticalInset: CGFloat = 0
+            let widthScale = (proxy.size.width - horizontalInset * 2) / basePanelWidth
+            let heightScale = (proxy.size.height - verticalInset * 2) / basePanelHeight
+            let scale = min(CGFloat(1.0), widthScale, heightScale)
+            let scaledPanelWidth = basePanelWidth * scale
+            let scaledPanelHeight = basePanelHeight * scale
+            let panelShape = RoundedRectangle(cornerRadius: 28, style: .continuous)
+
+            VStack {
+                VStack(spacing: 0) {
+                    VisualizationHeaderView(onReturn: onReturn)
+                        .frame(height: headerHeight)
+                        .padding(.horizontal, horizontalPadding)
+                        .padding(.top, headerTopPadding)
+
+                    VStack(spacing: cardSpacing) {
                         VisualizationTopGrid(
                             samples: visibleSamples,
                             appModel: appModel,
-                            parameterRows: parameterRows
+                            parameterRows: parameterRows,
+                            fullRowWidth: fullRowWidth,
+                            fullRowHeight: fullRowHeight,
+                            cardWidth: pairCardWidth,
+                            cardHeight: pairCardHeight,
+                            spacing: cardSpacing
                         )
 
-                        VisualizationBottomRow(samples: visibleSamples)
+                        VisualizationBottomRow(
+                            samples: visibleSamples,
+                            cardWidth: pairCardWidth,
+                            cardHeight: pairCardHeight,
+                            spacing: cardSpacing
+                        )
                     }
-                    .padding(.horizontal, 28)
-                    .padding(.bottom, 28)
+                    .padding(.top, firstRowTopSpacing)
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.bottom, bottomSpacing)
                 }
-                .scrollIndicators(.hidden)
+                .frame(width: basePanelWidth, height: basePanelHeight, alignment: .topLeading)
+                .background(.ultraThinMaterial, in: panelShape)
+                .clipShape(panelShape)
+                .scaleEffect(scale)
+                .frame(width: scaledPanelWidth, height: scaledPanelHeight, alignment: .center)
             }
-            .frame(width: 1328, height: 920, alignment: .topLeading)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             // Ensure old floating HUD is hidden while telemetry screen is active.
             dismissWindow(id: "VXDisplay")
@@ -102,37 +140,53 @@ struct VisualizationTopGrid: View {
     let samples: [TelemetrySample]
     let appModel: AppModel
     let parameterRows: [(String, String)]
-
-    private let columns = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
-    ]
+    let fullRowWidth: CGFloat
+    let fullRowHeight: CGFloat
+    let cardWidth: CGFloat
+    let cardHeight: CGFloat
+    let spacing: CGFloat
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 16) {
-            SpeedChartCard(samples: samples)
-                .frame(minHeight: 220)
-            DriverInputChartCard(samples: samples)
-                .frame(minHeight: 220)
-            VehicleDynamicsChartCard(samples: samples)
-                .frame(minHeight: 220)
+        VStack(spacing: spacing) {
             TraceStatusCard(appModel: appModel, parameterRows: parameterRows)
-                .frame(minHeight: 220)
+                .frame(width: fullRowWidth, height: fullRowHeight)
+                .clipped()
+
+            HStack(spacing: spacing) {
+                SpeedChartCard(samples: samples)
+                    .frame(width: cardWidth, height: cardHeight)
+                    .clipped()
+                DriverInputChartCard(samples: samples)
+                    .frame(width: cardWidth, height: cardHeight)
+                    .clipped()
+            }
+
+            HStack(spacing: spacing) {
+                VehicleDynamicsChartCard(samples: samples)
+                    .frame(width: cardWidth, height: cardHeight)
+                    .clipped()
+                BrakeDistributionCard(samples: samples)
+                    .frame(width: cardWidth, height: cardHeight)
+                    .clipped()
+            }
         }
     }
 }
 
 struct VisualizationBottomRow: View {
     let samples: [TelemetrySample]
+    let cardWidth: CGFloat
+    let cardHeight: CGFloat
+    let spacing: CGFloat
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: spacing) {
             TireSlipCard(samples: samples)
-                .frame(maxWidth: .infinity, minHeight: 180)
+                .frame(width: cardWidth, height: cardHeight)
+                .clipped()
             TireForceCard(samples: samples)
-                .frame(maxWidth: .infinity, minHeight: 180)
-            BrakeDistributionCard(samples: samples)
-                .frame(maxWidth: .infinity, minHeight: 180)
+                .frame(width: cardWidth, height: cardHeight)
+                .clipped()
         }
     }
 }
@@ -151,7 +205,7 @@ struct TelemetryCardView<Content: View>: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
 
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.headline.weight(.semibold))
                 .foregroundStyle(TelemetryTheme.textPrimary)
@@ -164,7 +218,9 @@ struct TelemetryCardView<Content: View>: View {
 
             content
         }
-        .padding(16)
+        .padding(.top, 20)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
             shape
@@ -308,25 +364,31 @@ private struct TraceStatusCard: View {
 
     var body: some View {
         TelemetryCardView(title: "Trace / Replay Status", subtitle: "Current simulation state and applied setup") {
-            VStack(alignment: .leading, spacing: 10) {
-                statusRow("Simulation", appModel.isAnimating ? "Running" : "Idle")
-                statusRow("Trigger Flag", appModel.shouldStartAnimation ? "Queued" : "None")
-                statusRow("Current Vx", String(format: "%.2f km/h", appModel.currentVX))
+            HStack(alignment: .top, spacing: 18) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Simulation Status")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(TelemetryTheme.textPrimary)
+                    statusRow("Simulation", appModel.isAnimating ? "Running" : "Idle")
+                    statusRow("Trigger Flag", appModel.shouldStartAnimation ? "Queued" : "None")
+                    statusRow("Current Vx", String(format: "%.2f km/h", appModel.currentVX))
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
 
-                Divider().overlay(.white.opacity(0.14))
+                Divider()
+                    .overlay(.white.opacity(0.14))
 
-                Text("Applied Parameters")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(TelemetryTheme.textPrimary)
-
-                ScrollView(.vertical) {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                        ForEach(parameterRows, id: \.0) { row in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Applied Parameters")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(TelemetryTheme.textPrimary)
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 4) {
+                        ForEach(Array(parameterRows.prefix(8)), id: \.0) { row in
                             compactStatusRow(row.0, row.1)
                         }
                     }
                 }
-                .scrollIndicators(.hidden)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         }
     }
@@ -462,7 +524,7 @@ private struct ChartSurface<Content: View>: View {
 
     var body: some View {
         content
-            .frame(height: 112)
+            .frame(height: 96)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(

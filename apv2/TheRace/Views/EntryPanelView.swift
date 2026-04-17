@@ -12,12 +12,9 @@ struct LoadingView: View {
                     .resizable()
                     .scaledToFill()
             } placeholder: {
-                Color.black
+                Color.clear
             }
             .ignoresSafeArea()
-
-            Color.black.opacity(0.38)
-                .ignoresSafeArea()
 
             GlassPanel(padding: 20, cornerRadius: 32) {
                 VStack(spacing: 8) {

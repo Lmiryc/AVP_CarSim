@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ParameterSidebarView: View {
     @Bindable var viewModel: TheRaceViewModel
+    let width: CGFloat
+    let height: CGFloat
     @State private var showAdvanced = true
 
     var body: some View {
@@ -54,7 +56,7 @@ struct ParameterSidebarView: View {
             }
             .scrollIndicators(.hidden)
         }
-        .frame(width: 320, height: 720)
+        .frame(width: width, height: height)
         .background(
             Rectangle()
                 .fill(Color.black.opacity(0.16))

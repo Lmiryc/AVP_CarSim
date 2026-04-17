@@ -3,8 +3,15 @@ import SwiftUI
 struct ParameterDetailView: View {
     @Bindable var viewModel: TheRaceViewModel
     let onReadyToggle: () -> Void
+    let width: CGFloat
+    let height: CGFloat
 
     var body: some View {
+        let contentHorizontalPadding: CGFloat = 24
+        let contentSpacing: CGFloat = 12
+        let descriptionWidth = min(260, max(220, width * 0.27))
+        let imageWidth = max(360, width - contentHorizontalPadding * 2 - descriptionWidth - contentSpacing)
+
         VStack(spacing: 0) {
             HStack {
                 Text(viewModel.selectedPage.title)
@@ -22,7 +29,10 @@ struct ParameterDetailView: View {
 
             VStack(spacing: 0) {
                 HStack(alignment: .top, spacing: 12) {
-                    ParameterIllustrationView(page: viewModel.selectedPage)
+                    ParameterIllustrationView(
+                        page: viewModel.selectedPage,
+                        width: imageWidth
+                    )
 
                     VStack(alignment: .leading, spacing: 10) {
                         Text("What is \(viewModel.selectedPage.title)?")
@@ -32,10 +42,10 @@ struct ParameterDetailView: View {
                             .font(.system(size: 15, weight: .regular))
                             .foregroundStyle(.white.opacity(0.72))
                     }
-                    .frame(width: 284, alignment: .topLeading)
-                    .padding(.trailing, 20)
+                    .frame(width: descriptionWidth, alignment: .topLeading)
                     .padding(.top, 2)
                 }
+                .padding(.horizontal, 24)
                 .frame(height: 400)
 
                 Spacer(minLength: 0)
@@ -46,12 +56,13 @@ struct ParameterDetailView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .frame(width: 960, height: 720)
+        .frame(width: width, height: height)
     }
 }
 
 private struct ParameterIllustrationView: View {
     let page: ParameterPage
+    let width: CGFloat
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -76,9 +87,8 @@ private struct ParameterIllustrationView: View {
                     .foregroundStyle(.white.opacity(0.45))
             }
         }
-        .frame(width: 628, height: 400)
+        .frame(width: width, height: 400)
         .clipShape(shape)
         .overlay(shape.stroke(Color.white.opacity(0.1), lineWidth: 1))
-        .padding(.leading, 24)
     }
 }

@@ -18,8 +18,7 @@ struct apv2App: App {
             TheRaceRootView()
                 .environment(appModel)
         }
-        .defaultSize(width: 1500, height: 820)
-        .windowStyle(.plain)
+        .defaultSize(width: 1500, height: 1210)
 
         // 保留原测试控制面板窗口，便于后端/仿真调试
         WindowGroup(id: "ControlPanel") {

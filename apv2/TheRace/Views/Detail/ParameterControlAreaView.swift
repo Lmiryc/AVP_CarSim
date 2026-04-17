@@ -29,7 +29,7 @@ struct ParameterControlAreaView: View {
                         .foregroundStyle(.white)
                     Spacer()
                     Slider(value: binding, in: range, step: step)
-                        .tint(.white.opacity(0.85))
+                        .tint(.blue)
                     Spacer()
                     Text(formatValue(range.upperBound, unit: page.unit, step: step))
                         .font(.system(size: 15, weight: .medium))
