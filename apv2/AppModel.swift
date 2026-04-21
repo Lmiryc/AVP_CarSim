@@ -12,18 +12,7 @@ import simd
 @MainActor
 @Observable
 class AppModel {
-    struct SimulationParameterSet {
-        var vehicleMass: Double = 1240
-        var yawInertia: Double = 3350
-        var rollingRadius: Double = 0.30
-        var tireGrip: Double = 0.85
-        var rollingResistance: Double = 0.015
-        var brakeBias: Double = 0.60
-        var brakeResponseTime: Double = 0.25
-        var absEnabled: Bool = false
-    }
-
-    let immersiveSpaceID = "CarSimSpace"
+    let immersiveSpaceID = "ImmersiveSpace"
     enum ImmersiveSpaceState {
         case closed
         case inTransition
@@ -41,21 +30,7 @@ class AppModel {
     // 当前车辆姿态（供 CarDetailWindow 实时同步）
     var currentCarPosition: SIMD3<Float> = .zero
     var currentCarRotation: simd_quatf = simd_quatf(angle: 0, axis: [0, 1, 0])
-    // 用于同步轮胎状态
+    // 新增：用于同步轮胎状态
     var currentSteering: WheelSteering = WheelSteering(l1: 0, l2: 0, r1: 0, r2: 0)
     var currentWheelRoll: Float = 0.0 // 记录轮胎往前滚动的累积弧度
-
-    // 前端参数页写入的仿真参数快照
-    var simulationParameters = SimulationParameterSet()
-
-    var selectedDatasetFileName: String {
-        // Dataset naming convention: LastRun{massIndex}_{yawIndex}.csv
-        // massIndex maps mass 1000..2000 step 200  -> 0..5
-        // yawIndex maps yawInertia 1500..4000 step 500 -> 0..5
-        let massIndex = Int(((simulationParameters.vehicleMass - 1000) / 200).rounded(.toNearestOrAwayFromZero))
-        let yawIndex = Int(((simulationParameters.yawInertia - 1500) / 500).rounded(.toNearestOrAwayFromZero))
-        let clampedMassIndex = min(max(massIndex, 0), 5)
-        let clampedYawIndex = min(max(yawIndex, 0), 5)
-        return "LastRun\(clampedMassIndex)_\(clampedYawIndex)"
-    }
 }

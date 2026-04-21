@@ -13,19 +13,11 @@ struct apv2App: App {
     @State private var appModel = AppModel()
 
     var body: some Scene {
-        // 主窗口：The Race 前端 UI
+        // 控制面板：只有 UI 按钮，没有 3D 内容，不会裁剪汽车
         WindowGroup {
-            TheRaceRootView()
-                .environment(appModel)
-        }
-        .defaultSize(width: 1500, height: 1210)
-
-        // 保留原测试控制面板窗口，便于后端/仿真调试
-        WindowGroup(id: "ControlPanel") {
             ControlPanelView()
                 .environment(appModel)
-        }
-        .defaultSize(width: 400, height: 250)
+        }.defaultSize(width: 400, height: 350)
 
         Window("Third Person View", id: "CarDetailWindow") {
             CarDetailView()
