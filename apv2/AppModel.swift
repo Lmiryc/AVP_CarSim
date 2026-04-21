@@ -12,7 +12,8 @@ import simd
 @MainActor
 @Observable
 class AppModel {
-    let immersiveSpaceID = "ImmersiveSpace"
+    // Must match the ImmersiveSpace id in `apv2App.swift`
+    let immersiveSpaceID = "CarSimSpace"
     enum ImmersiveSpaceState {
         case closed
         case inTransition

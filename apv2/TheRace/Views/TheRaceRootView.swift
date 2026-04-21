@@ -73,7 +73,6 @@ private extension TheRaceRootView {
 
         // Ready path: activate UI, push params to backend, start simulation signal.
         viewModel.setReady(true)
-        applyCurrentParametersToBackend()
 
         Task { @MainActor in
             _ = await openImmersiveSpace(id: appModel.immersiveSpaceID)
@@ -89,16 +88,6 @@ private extension TheRaceRootView {
         }
     }
 
-    func applyCurrentParametersToBackend() {
-        appModel.simulationParameters = .init(
-            vehicleMass: viewModel.sliderValue(for: "vehicleMass", fallback: 1240),
-            yawInertia: viewModel.sliderValue(for: "yawInertia", fallback: 3350),
-            rollingRadius: viewModel.sliderValue(for: "rollingRadius", fallback: 0.30),
-            tireGrip: viewModel.sliderValue(for: "tireGrip", fallback: 0.85),
-            rollingResistance: viewModel.sliderValue(for: "rollingResistance", fallback: 0.015),
-            brakeBias: viewModel.sliderValue(for: "brakeBias", fallback: 0.60)
-        )
-    }
 }
 
 #Preview {

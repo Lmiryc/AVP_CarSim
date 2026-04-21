@@ -13,6 +13,7 @@ struct VisualizationScreenView: View {
     @State private var visibleSamples: [TelemetrySample] = []
     @State private var playbackTask: Task<Void, Never>?
     @State private var isCarDetailWindowOpen = false
+    private let defaultDatasetFileName = "LastRun3_1"
 
     var body: some View {
         GeometryReader { proxy in
@@ -86,7 +87,9 @@ struct VisualizationScreenView: View {
         .onAppear {
             // Ensure old floating HUD is hidden while telemetry screen is active.
             dismissWindow(id: "VXDisplay")
-            allSamples = TelemetryLoader.loadDatasetSamples(fileName: appModel.selectedDatasetFileName)
+            // Keep dataset selection consistent with `apv2/carsim.swift` on main:
+            // mass=1600 (index 3), yaw=2000 (index 1) -> LastRun3_1
+            allSamples = TelemetryLoader.loadDatasetSamples(fileName: defaultDatasetFileName)
             startTelemetryPlayback()
         }
         .onDisappear {

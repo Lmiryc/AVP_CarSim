@@ -28,9 +28,34 @@ enum TelemetryLoader {
     static func loadDatasetSamples(fileName: String) -> [TelemetrySample] {
         let fileNameCandidates = [fileName, "LastRun", "race"]
         func urlFor(_ name: String) -> URL? {
-            Bundle.main.url(forResource: name, withExtension: "csv", subdirectory: "racedataset") ??
-            Bundle.main.url(forResource: name, withExtension: "csv") ??
-            Bundle.main.bundleURL.appendingPathComponent("racedataset/\(name).csv")
+            // 1) App bundle (when dataset is packaged as a resource)
+            let bundleCandidates: [URL?] = [
+                Bundle.main.url(forResource: name, withExtension: "csv", subdirectory: "racedataset"),
+                Bundle.main.url(forResource: name, withExtension: nil, subdirectory: "racedataset"),
+                Bundle.main.url(forResource: name, withExtension: "csv"),
+                Bundle.main.url(forResource: name, withExtension: nil)
+            ]
+            if let url = bundleCandidates.compactMap({ $0 }).first {
+                return url
+            }
+
+            // 2) App sandbox (when dataset is sideloaded into the app on device)
+            if let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                let urlCandidates = [
+                    docs.appendingPathComponent("racedataset/\(name).csv"),
+                    docs.appendingPathComponent("racedataset/\(name)")
+                ]
+                if let url = urlCandidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }) {
+                    return url
+                }
+            }
+
+            // 3) Fallback: relative path from bundle URL (mostly for macOS dev)
+            let urlCandidates = [
+                Bundle.main.bundleURL.appendingPathComponent("racedataset/\(name).csv"),
+                Bundle.main.bundleURL.appendingPathComponent("racedataset/\(name)")
+            ]
+            return urlCandidates.first
         }
         guard let url = fileNameCandidates.compactMap(urlFor).first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
             return fallbackSamples()
