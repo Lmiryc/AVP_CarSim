@@ -324,14 +324,11 @@ struct CarSimulationView: View {
 
         let url =
             Bundle.main.url(forResource: fileName, withExtension: "csv", subdirectory: "racedataset") ??
-            Bundle.main.url(forResource: fileName, withExtension: nil, subdirectory: "racedataset") ??
             Bundle.main.url(forResource: fileName, withExtension: "csv") ??
-            Bundle.main.url(forResource: fileName, withExtension: nil) ??
-            Bundle.main.bundleURL.appendingPathComponent("racedataset/\(fileName).csv") ??
-            Bundle.main.bundleURL.appendingPathComponent("racedataset/\(fileName)")
+            Bundle.main.bundleURL.appendingPathComponent("racedataset/\(fileName).csv")
 
         guard FileManager.default.fileExists(atPath: url.path) else {
-            print("❌ 找不到数据文件: racedataset/\(fileName)(.csv)")
+            print("❌ 找不到 CSV 文件: racedataset/\(fileName).csv")
             return
         }
 
