@@ -324,7 +324,9 @@ struct CarSimulationView: View {
 
         let url =
             Bundle.main.url(forResource: fileName, withExtension: "csv", subdirectory: "racedataset") ??
+            Bundle.main.url(forResource: fileName, withExtension: nil, subdirectory: "racedataset") ??
             Bundle.main.url(forResource: fileName, withExtension: "csv") ??
+            Bundle.main.url(forResource: fileName, withExtension: nil) ??
             Bundle.main.bundleURL.appendingPathComponent("racedataset/\(fileName).csv")
 
         guard FileManager.default.fileExists(atPath: url.path) else {
