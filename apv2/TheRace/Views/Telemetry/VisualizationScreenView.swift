@@ -13,6 +13,7 @@ struct VisualizationScreenView: View {
     @State private var visibleSamples: [TelemetrySample] = []
     @State private var playbackTask: Task<Void, Never>?
     @State private var isCarDetailWindowOpen = false
+    @State private var pausedForCarDetailOpen = false
     private let defaultDatasetFileName = "LastRun3_1"
 
     var body: some View {
@@ -90,7 +91,23 @@ struct VisualizationScreenView: View {
             // Keep dataset selection consistent with `apv2/carsim.swift` on main:
             // mass=1600 (index 3), yaw=2000 (index 1) -> LastRun3_1
             allSamples = TelemetryLoader.loadDatasetSamples(fileName: defaultDatasetFileName)
-            startTelemetryPlayback()
+
+            // Warm up heavy RealityKit assets to reduce latency when opening car detail window.
+            Task { await ModelLibrary.shared.preloadGT3RS() }
+
+            // If sim is already running when we arrive, start playback now.
+            if appModel.isAnimating {
+                startTelemetryPlayback()
+            }
+        }
+        .onChange(of: appModel.isAnimating) { _, isAnimating in
+            // Keep telemetry playback aligned with sim lifecycle.
+            if isAnimating {
+                startTelemetryPlayback()
+            } else {
+                playbackTask?.cancel()
+                playbackTask = nil
+            }
         }
         .onDisappear {
             playbackTask?.cancel()
@@ -105,11 +122,26 @@ struct VisualizationScreenView: View {
 
     private func toggleCarDetailWindow() {
         if isCarDetailWindowOpen {
+            print("🪟 Telemetry: dismiss CarDetailWindow")
             dismissWindow(id: "CarDetailWindow")
             isCarDetailWindowOpen = false
+            if pausedForCarDetailOpen {
+                pausedForCarDetailOpen = false
+                startTelemetryPlayback()
+            }
         } else {
-            openWindow(id: "CarDetailWindow")
-            isCarDetailWindowOpen = true
+            print("🪟 Telemetry: open CarDetailWindow (preloading model, pausing playback)")
+            playbackTask?.cancel()
+            playbackTask = nil
+            pausedForCarDetailOpen = true
+
+            Task {
+                await ModelLibrary.shared.preloadGT3RS()
+                await MainActor.run {
+                    openWindow(id: "CarDetailWindow")
+                    isCarDetailWindowOpen = true
+                }
+            }
         }
     }
 

@@ -27,10 +27,11 @@ struct apv2App: App {
         }
         .defaultSize(width: 400, height: 350)
 
-        Window("Third Person View", id: "CarDetailWindow") {
+        WindowGroup(id: "CarDetailWindow") {
             CarDetailView()
                 .environment(appModel)
         }
+        .defaultSize(width: 720, height: 540)
 
         // 沉浸空间：无边界，3D 汽车可以自由移动
         ImmersiveSpace(id: "CarSimSpace") {

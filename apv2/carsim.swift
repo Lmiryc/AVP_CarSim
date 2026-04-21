@@ -45,6 +45,12 @@ struct CarSimulationView: View {
     @State private var planeAnchor: AnchorEntity?
     @State private var frames: [CarFrame] = []
     @State private var pendingStartAnimation = false
+    @State private var groundEntity: ModelEntity?
+    @State private var didFitGroundToRoad = false
+    @State private var userYaw: Float = 0
+    @State private var userScale: Float = 1.0
+    @State private var accumulatedYaw: Float = 0
+    @State private var accumulatedScale: Float = 1.0
     
     // 动画与暂停状态
     @State private var isPlaying = false
@@ -94,12 +100,34 @@ struct CarSimulationView: View {
     var body: some View {
         ZStack { // 使用 ZStack 防止隐藏按钮占据空间导致画面偏移
             RealityView { content in
-                let planeAnchor = AnchorEntity(plane: .horizontal)
+                // Only allow upward-facing horizontal planes (floor/table), not ceilings.
+                // `.horizontal` alone can match both floor and ceiling on visionOS.
+                let planeAnchor = AnchorEntity(plane: .horizontal, classification: .floor, minimumBounds: [0.3, 0.3])
                 self.planeAnchor = planeAnchor
                 content.add(planeAnchor)
                 
                 planeAnchor.addChild(trajectoryAnchor)
                 planeAnchor.addChild(mapAnchor)
+
+                if groundEntity == nil {
+                    // Placeholder ground. We'll resize + round it once `road` finishes loading.
+                    let mesh = MeshResource.generateBox(size: [1.0, 0.01, 1.0], cornerRadius: 0.08)
+                    // Use a frosted-glass-like PBR material.
+                    var material = PhysicallyBasedMaterial()
+                    material.baseColor = .init(tint: UIColor(white: 1.0, alpha: 1.0))
+                    material.roughness = .init(floatLiteral: 0.85)
+                    material.metallic = .init(floatLiteral: 0.05)
+                    material.clearcoat = .init(floatLiteral: 0.2)
+                    material.clearcoatRoughness = .init(floatLiteral: 0.4)
+                    // Slightly less transparent so rounded edges read without needing a second layer.
+                    material.blending = .transparent(opacity: .init(floatLiteral: 0.80))
+
+                    let ground = ModelEntity(mesh: mesh, materials: [material])
+                    ground.name = "TrackGround"
+                    ground.position = [viewingOffset.x, viewingOffset.y - 0.03, viewingOffset.z]
+                    mapAnchor.addChild(ground)
+                    groundEntity = ground
+                }
 
                 if let road = try? await Entity(named: "road") {
                     road.position = viewingOffset
@@ -109,6 +137,14 @@ struct CarSimulationView: View {
                     road.transform.rotation = rotationY * rotationX * rotationsth
                     road.scale = [effectiveRoadScaleX, effectiveRoadScaleY, effectiveRoadScaleZ]
                     mapAnchor.addChild(road)
+
+                    // Resize ground to road bounds (with padding) and center it.
+                    if !didFitGroundToRoad {
+                        didFitGroundToRoad = true
+                        DispatchQueue.main.async {
+                            fitGroundToRoad(road: road, container: mapAnchor)
+                        }
+                    }
                 }
 
                 if let model = try? await Entity(named: "GT3RS") {
@@ -136,6 +172,30 @@ struct CarSimulationView: View {
                     }
                 }
             }
+            .gesture(
+                DragGesture(minimumDistance: 8)
+                    .onChanged { value in
+                        // Horizontal drag -> yaw rotation
+                        let deltaYaw = Float(value.translation.width) * 0.005
+                        userYaw = accumulatedYaw + deltaYaw
+                        applyUserTransform()
+                    }
+                    .onEnded { _ in
+                        accumulatedYaw = userYaw
+                    }
+            )
+            .simultaneousGesture(
+                MagnificationGesture()
+                    .onChanged { factor in
+                        // Clamp scale to keep it usable
+                        let s = Float(factor)
+                        userScale = min(max(accumulatedScale * s, 0.35), 2.5)
+                        applyUserTransform()
+                    }
+                    .onEnded { _ in
+                        accumulatedScale = userScale
+                    }
+            )
             // 键盘按键监听 (Space 键暂停)
             Button(action: {
                 if isPlaying {
@@ -570,5 +630,33 @@ struct CarSimulationView: View {
             isPaused = false
             appModel.isAnimating = false
         }
+    }
+
+    private func applyUserTransform() {
+        guard let planeAnchor else { return }
+        // Rotate + scale the whole rig so road, car, and ground stay aligned.
+        planeAnchor.transform.rotation = simd_quatf(angle: userYaw, axis: [0, 1, 0])
+        planeAnchor.transform.scale = [userScale, userScale, userScale]
+    }
+
+    private func fitGroundToRoad(road: Entity, container: Entity) {
+        guard let groundEntity else { return }
+
+        // Use the road's axis-aligned bounds in `container` space.
+        let bounds = road.visualBounds(relativeTo: container)
+        let extents = bounds.extents
+        let center = bounds.center
+
+        // Road is typically long in Z; add a little padding around.
+        let padding: Float = 0.6
+        let thickness: Float = 0.03
+        let width = max(0.5, extents.x + padding * 2)
+        let depth = max(0.5, extents.z + padding * 2)
+        // Make corners visibly rounded (visionOS-style large radius).
+        let cornerRadius = min(min(width, depth) * 0.28, 2.5)
+
+        groundEntity.model?.mesh = .generateBox(size: [width, thickness, depth], cornerRadius: cornerRadius)
+        // Put the ground slightly below the road.
+        groundEntity.position = [center.x, (bounds.min.y - thickness * 0.5) - 0.002, center.z]
     }
 }

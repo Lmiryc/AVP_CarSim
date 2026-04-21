@@ -17,7 +17,7 @@ struct CarDetailView: View {
         let currentRoll = appModel.currentWheelRoll
 
         RealityView { content in
-            if let car = try? await Entity(named: "GT3RS") {
+            if let car = try? await ModelLibrary.shared.makeGT3RSInstance() {
                 // 基础朝向与缩放
                 let flatRotation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
                 let headingRotation = simd_quatf(angle: .pi, axis: [0, 0, 1])
