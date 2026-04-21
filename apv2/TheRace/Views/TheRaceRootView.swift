@@ -75,7 +75,7 @@ private extension TheRaceRootView {
         viewModel.setReady(true)
 
         Task { @MainActor in
-            _ = await openImmersiveSpace(id: appModel.immersiveSpaceID)
+            _ = await openImmersiveSpace(id: "CarSimSpace")
             openWindow(id: "VXDisplay")
             appModel.shouldStartAnimation = true
         }
