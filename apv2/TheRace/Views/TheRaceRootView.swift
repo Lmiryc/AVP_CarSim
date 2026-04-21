@@ -96,9 +96,7 @@ private extension TheRaceRootView {
             rollingRadius: viewModel.sliderValue(for: "rollingRadius", fallback: 0.30),
             tireGrip: viewModel.sliderValue(for: "tireGrip", fallback: 0.85),
             rollingResistance: viewModel.sliderValue(for: "rollingResistance", fallback: 0.015),
-            brakeBias: viewModel.sliderValue(for: "brakeBias", fallback: 0.60),
-            brakeResponseTime: viewModel.sliderValue(for: "brakeResponseTime", fallback: 0.25),
-            absEnabled: viewModel.absEnabled
+            brakeBias: viewModel.sliderValue(for: "brakeBias", fallback: 0.60)
         )
     }
 }

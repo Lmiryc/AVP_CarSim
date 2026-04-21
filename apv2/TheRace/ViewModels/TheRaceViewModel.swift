@@ -19,8 +19,6 @@ final class TheRaceViewModel {
     var selectedPageID: String = "yawInertia"
     var sliderValues: [String: Double] = [:]
 
-    var absEnabled = false
-
     var avatars: [Avatar] = [
         .init(name: "P1"),
         .init(name: "P2"),
@@ -99,10 +97,6 @@ final class TheRaceViewModel {
     }
 
     func formattedValue(for page: ParameterPage) -> String {
-        if page.type == .toggle {
-            return absEnabled ? "ON" : "OFF"
-        }
-
         let rawValue = sliderValue(for: page.id)
         let step = page.step ?? 1
 
@@ -144,9 +138,7 @@ final class TheRaceViewModel {
             ("Rolling Radius", formattedValueByID("rollingRadius", unitFallback: "m", fallback: 0.30)),
             ("Tire Grip", formattedValueByID("tireGrip", unitFallback: "", fallback: 0.85)),
             ("Rolling Resistance", formattedValueByID("rollingResistance", unitFallback: "", fallback: 0.015)),
-            ("Brake Bias", formattedValueByID("brakeBias", unitFallback: "", fallback: 0.60)),
-            ("Brake Response Time", formattedValueByID("brakeResponseTime", unitFallback: "s", fallback: 0.25)),
-            ("ABS", absEnabled ? "ON" : "OFF")
+            ("Brake Bias", formattedValueByID("brakeBias", unitFallback: "", fallback: 0.60))
         ]
     }
 

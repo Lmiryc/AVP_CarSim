@@ -84,7 +84,7 @@ struct CarSimulationView: View {
     let viewingOffset: SIMD3<Float> = [0, -0.5, -3]
 
     // 轮胎运动调试参数
-    let wheelRadiusMeters: Float = 0.34
+    var wheelRadiusMeters: Float { max(0.01, Float(appModel.simulationParameters.rollingRadius)) }
     let steeringVisualScale: Float = 2.5
     let steeringValueIsDegrees: Bool = false
     let frontSteeringSign: Float = -1.0
@@ -110,7 +110,7 @@ struct CarSimulationView: View {
                     mapAnchor.addChild(road)
                 }
 
-                if let model = try? await Entity(named: "GT3RS") {
+                if let model = try? await Entity(named: "carframe") {
                     let flatRotation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
                     let headingRotation = simd_quatf(angle: .pi , axis: [0, 0, 1])
                     model.transform.rotation = flatRotation * headingRotation
@@ -123,15 +123,13 @@ struct CarSimulationView: View {
                     loadCSVData()
                 }
             }
-
-            if let model = try? await Entity(named: "carframe") {
-                applyColor(to: model, color: carColor)
-                let flatRotation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
-                let headingRotation = simd_quatf(angle: .pi , axis: [0, 0, 1])
-                model.transform.rotation = flatRotation * headingRotation
-                model.scale = [effectiveCarScale, effectiveCarScale, effectiveCarScale]
-                trajectoryAnchor.addChild(model)
-                loadCSVData()
+            .onChange(of: appModel.shouldStartAnimation) { _, newValue in
+                if newValue {
+                    appModel.shouldStartAnimation = false
+                    if !frames.isEmpty && !isPlaying {
+                        startAnimation()
+                    }
+                }
             }
             // 键盘按键监听 (Space 键暂停)
             Button(action: {
@@ -319,20 +317,23 @@ struct CarSimulationView: View {
     
     private func loadCSVData() {
         print("🔍 1. 开始尝试读取 CSV 文件...")
-        let mass = 1600, yaw = 2000
-        let massIndex = Int((mass - 1000) / 200)
-        let yawIndex = Int((yaw - 1500) / 500)
-        let fileName = "LastRun\(massIndex)_\(yawIndex)"
+        let fileNameCandidates = [
+            appModel.selectedDatasetFileName,
+            "LastRun",
+            "race"
+        ]
 
-        let url =
-            Bundle.main.url(forResource: fileName, withExtension: "csv", subdirectory: "racedataset") ??
-            Bundle.main.url(forResource: fileName, withExtension: "csv") ??
-            Bundle.main.bundleURL.appendingPathComponent("racedataset/\(fileName).csv")
-
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            print("❌ 找不到 CSV 文件: racedataset/\(fileName).csv")
+        func urlFor(_ name: String) -> URL? {
+            Bundle.main.url(forResource: name, withExtension: "csv", subdirectory: "racedataset") ??
+            Bundle.main.url(forResource: name, withExtension: "csv") ??
+            Bundle.main.bundleURL.appendingPathComponent("racedataset/\(name).csv")
+        }
+        guard let url = fileNameCandidates.compactMap(urlFor).first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
+            print("❌ 找不到 CSV 文件候选: \(fileNameCandidates.joined(separator: \", \"))")
             return
         }
+
+        print("✅ 已加载数据集: \(url.lastPathComponent)")
 
         guard let content = try? String(contentsOf: url, encoding: .utf8) else { return }
 
@@ -548,7 +549,7 @@ struct CarSimulationView: View {
                 appModel.currentCarRotation = targetFrame.rotation
                 
                 let dt = Float(max(0, targetFrame.time - previousFrameTime))
-                let wheelRadius: Float = 0.35 // 假设 GT3RS 轮胎半径是 0.35米，你可以微调
+                let wheelRadius: Float = wheelRadiusMeters
                 // 滚动角速度 = 速度 / 半径。转角增量 = 角速度 * dt
                 appModel.currentWheelRoll -= (targetFrame.vx * dt) / wheelRadius
 

@@ -25,80 +25,123 @@ struct TelemetrySample: Identifiable {
 }
 
 enum TelemetryLoader {
-    static func loadRaceSamples() -> [TelemetrySample] {
-        guard let url = Bundle.main.url(forResource: "race", withExtension: "csv"),
-              let content = try? String(contentsOf: url, encoding: .utf8) else {
+    static func loadDatasetSamples(fileName: String) -> [TelemetrySample] {
+        let fileNameCandidates = [fileName, "LastRun", "race"]
+        func urlFor(_ name: String) -> URL? {
+            Bundle.main.url(forResource: name, withExtension: "csv", subdirectory: "racedataset") ??
+            Bundle.main.url(forResource: name, withExtension: "csv") ??
+            Bundle.main.bundleURL.appendingPathComponent("racedataset/\(name).csv")
+        }
+        guard let url = fileNameCandidates.compactMap(urlFor).first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
+            return fallbackSamples()
+        }
+
+        guard let content = try? String(contentsOf: url, encoding: .utf8) else {
             return fallbackSamples()
         }
 
         let lines = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
         guard lines.count > 1 else { return fallbackSamples() }
 
-        let headers = lines[0].components(separatedBy: ",")
+        let headers = lines[0].components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
         let indexMap = Dictionary(uniqueKeysWithValues: headers.enumerated().map { ($1, $0) })
 
-        func value(_ columns: [Substring], _ key: String) -> Double {
-            guard let idx = indexMap[key], idx < columns.count else { return 0 }
-            return Double(columns[idx]) ?? 0
+        func value(_ columns: [Substring], keys: [String]) -> Double {
+            for key in keys {
+                if let idx = indexMap[key], idx < columns.count, let v = Double(columns[idx]) {
+                    return v
+                }
+            }
+            return 0
         }
 
         var samples: [TelemetrySample] = []
-        samples.reserveCapacity(lines.count / 8)
+        samples.reserveCapacity(lines.count)
 
-        for i in stride(from: 1, to: lines.count, by: 8) {
+        for i in 1..<lines.count {
             let columns = lines[i].split(separator: ",", omittingEmptySubsequences: false)
             if columns.isEmpty { continue }
 
-            let sample = TelemetrySample(
-                time: value(columns, "Time"),
-                vx: value(columns, "Vx"),
-                throttle: value(columns, "Throttle"),
-                brakeCommand: value(columns, "Pbk_Con"),
-                steering: value(columns, "Steer_SW"),
-                ax: value(columns, "Ax"),
-                ay: value(columns, "Ay"),
-                avz: value(columns, "AVz"),
-                alphaFrontAvg: mean([
-                    value(columns, "Alpha_L1"),
-                    value(columns, "Alpha_L2"),
-                    value(columns, "Alpha_R1"),
-                    value(columns, "Alpha_R2")
-                ]),
-                kappaFrontAvg: mean([
-                    value(columns, "Kappa_L1"),
-                    value(columns, "Kappa_L2"),
-                    value(columns, "Kappa_R1"),
-                    value(columns, "Kappa_R2")
-                ]),
-                fxTotal: mean([
-                    value(columns, "Fx_L1"),
-                    value(columns, "Fx_L2"),
-                    value(columns, "Fx_R1"),
-                    value(columns, "Fx_R2")
-                ]),
-                fyTotal: mean([
-                    value(columns, "Fy_L1"),
-                    value(columns, "Fy_L2"),
-                    value(columns, "Fy_R1"),
-                    value(columns, "Fy_R2")
-                ]),
-                fzTotal: mean([
-                    value(columns, "Fz_L1"),
-                    value(columns, "Fz_L2"),
-                    value(columns, "Fz_R1"),
-                    value(columns, "Fz_R2")
-                ]),
-                brakeFrontAvg: mean([
-                    value(columns, "PbkCh_L1"),
-                    value(columns, "PbkCh_L2")
-                ]),
-                brakeRearAvg: mean([
-                    value(columns, "PbkCh_R1"),
-                    value(columns, "PbkCh_R2")
-                ])
-            )
+            let time = value(columns, keys: ["time"])
+            if time == 0 && i > 1 { continue }
 
-            samples.append(sample)
+            let vx = value(columns, keys: ["vx", "v_x", "speed"])
+            let throttle = value(columns, keys: ["throttle", "thr"])
+            let brakeCommand = value(columns, keys: ["brake", "brakecommand", "pbk_con"])
+
+            let steering = mean([
+                value(columns, keys: ["steer_l1"]),
+                value(columns, keys: ["steer_l2"]),
+                value(columns, keys: ["steer_r1"]),
+                value(columns, keys: ["steer_r2"]),
+                value(columns, keys: ["steer_sw"])
+            ])
+
+            let ax = value(columns, keys: ["ax"])
+            let ay = value(columns, keys: ["ay"])
+            let avz = value(columns, keys: ["avz"])
+
+            let alphaFrontAvg = mean([
+                value(columns, keys: ["alpha_l1"]),
+                value(columns, keys: ["alpha_l2"]),
+                value(columns, keys: ["alpha_r1"]),
+                value(columns, keys: ["alpha_r2"])
+            ])
+
+            let kappaFrontAvg = mean([
+                value(columns, keys: ["kappa_l1"]),
+                value(columns, keys: ["kappa_l2"]),
+                value(columns, keys: ["kappa_r1"]),
+                value(columns, keys: ["kappa_r2"])
+            ])
+
+            let fxTotal = mean([
+                value(columns, keys: ["fx_l1"]),
+                value(columns, keys: ["fx_l2"]),
+                value(columns, keys: ["fx_r1"]),
+                value(columns, keys: ["fx_r2"])
+            ])
+            let fyTotal = mean([
+                value(columns, keys: ["fy_l1"]),
+                value(columns, keys: ["fy_l2"]),
+                value(columns, keys: ["fy_r1"]),
+                value(columns, keys: ["fy_r2"])
+            ])
+            let fzTotal = mean([
+                value(columns, keys: ["fz_l1"]),
+                value(columns, keys: ["fz_l2"]),
+                value(columns, keys: ["fz_r1"]),
+                value(columns, keys: ["fz_r2"])
+            ])
+
+            let brakeFrontAvg = mean([
+                value(columns, keys: ["pbkch_l1"]),
+                value(columns, keys: ["pbkch_l2"])
+            ])
+            let brakeRearAvg = mean([
+                value(columns, keys: ["pbkch_r1"]),
+                value(columns, keys: ["pbkch_r2"])
+            ])
+
+            samples.append(
+                TelemetrySample(
+                    time: time,
+                    vx: vx,
+                    throttle: throttle,
+                    brakeCommand: brakeCommand,
+                    steering: steering,
+                    ax: ax,
+                    ay: ay,
+                    avz: avz,
+                    alphaFrontAvg: alphaFrontAvg,
+                    kappaFrontAvg: kappaFrontAvg,
+                    fxTotal: fxTotal,
+                    fyTotal: fyTotal,
+                    fzTotal: fzTotal,
+                    brakeFrontAvg: brakeFrontAvg,
+                    brakeRearAvg: brakeRearAvg
+                )
+            )
         }
 
         return samples.isEmpty ? fallbackSamples() : samples

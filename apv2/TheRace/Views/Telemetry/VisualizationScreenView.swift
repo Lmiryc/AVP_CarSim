@@ -3,14 +3,16 @@ import Charts
 
 struct VisualizationScreenView: View {
     @Environment(\.dismissWindow) private var dismissWindow
+    @Environment(\.openWindow) private var openWindow
 
     let appModel: AppModel
     let parameterRows: [(String, String)]
     let onReturn: () -> Void
 
-    @State private var allSamples: [TelemetrySample] = TelemetryLoader.loadRaceSamples()
+    @State private var allSamples: [TelemetrySample] = []
     @State private var visibleSamples: [TelemetrySample] = []
     @State private var playbackTask: Task<Void, Never>?
+    @State private var isCarDetailWindowOpen = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -41,7 +43,11 @@ struct VisualizationScreenView: View {
 
             VStack {
                 VStack(spacing: 0) {
-                    VisualizationHeaderView(onReturn: onReturn)
+                    VisualizationHeaderView(
+                        isCarDetailWindowOpen: isCarDetailWindowOpen,
+                        onToggleCarDetailWindow: toggleCarDetailWindow,
+                        onReturn: onReturn
+                    )
                         .frame(height: headerHeight)
                         .padding(.horizontal, horizontalPadding)
                         .padding(.top, headerTopPadding)
@@ -80,12 +86,27 @@ struct VisualizationScreenView: View {
         .onAppear {
             // Ensure old floating HUD is hidden while telemetry screen is active.
             dismissWindow(id: "VXDisplay")
+            allSamples = TelemetryLoader.loadDatasetSamples(fileName: appModel.selectedDatasetFileName)
             startTelemetryPlayback()
         }
         .onDisappear {
             playbackTask?.cancel()
             playbackTask = nil
             dismissWindow(id: "VXDisplay")
+            if isCarDetailWindowOpen {
+                dismissWindow(id: "CarDetailWindow")
+                isCarDetailWindowOpen = false
+            }
+        }
+    }
+
+    private func toggleCarDetailWindow() {
+        if isCarDetailWindowOpen {
+            dismissWindow(id: "CarDetailWindow")
+            isCarDetailWindowOpen = false
+        } else {
+            openWindow(id: "CarDetailWindow")
+            isCarDetailWindowOpen = true
         }
     }
 
@@ -115,6 +136,8 @@ struct VisualizationScreenView: View {
 }
 
 struct VisualizationHeaderView: View {
+    let isCarDetailWindowOpen: Bool
+    let onToggleCarDetailWindow: () -> Void
     let onReturn: () -> Void
 
     var body: some View {
@@ -128,9 +151,13 @@ struct VisualizationHeaderView: View {
                     .foregroundStyle(TelemetryTheme.textSecondary)
             }
             Spacer()
-            Button("Back to Parameters", action: onReturn)
-                .buttonStyle(.borderedProminent)
-                .tint(.blue)
+            HStack(spacing: 12) {
+                Button(isCarDetailWindowOpen ? "Hide Car View" : "Show Car View", action: onToggleCarDetailWindow)
+                    .buttonStyle(.bordered)
+                Button("Back to Parameters", action: onReturn)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+            }
         }
         .frame(height: 80, alignment: .top)
     }

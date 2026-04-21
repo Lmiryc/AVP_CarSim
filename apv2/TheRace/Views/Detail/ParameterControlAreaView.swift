@@ -43,20 +43,7 @@ struct ParameterControlAreaView: View {
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
             } else {
-                HStack(spacing: 12) {
-                    Text(page.title)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.96))
-                    Spacer()
-                    Toggle("", isOn: $viewModel.absEnabled)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                }
-
-                Text(viewModel.absEnabled ? "ABS is ON" : "ABS is OFF")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .frame(maxWidth: .infinity, alignment: .center)
+                EmptyView()
             }
         }
         .padding(.horizontal, 20)

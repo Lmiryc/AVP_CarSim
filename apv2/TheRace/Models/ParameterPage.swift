@@ -39,10 +39,10 @@ extension ParameterPage {
             imageURL: "https://www.figma.com/api/mcp/asset/033c418f-b379-455e-b110-e1064ea90140",
             minValue: 1500,
             maxValue: 4000,
-            step: 100,
+            step: 500,
             unit: "kg·m²",
             type: .slider,
-            defaultSliderValue: 3350,
+            defaultSliderValue: 3500,
             section: .primary
         ),
         .init(
@@ -55,10 +55,10 @@ extension ParameterPage {
             imageURL: nil,
             minValue: 1000,
             maxValue: 2000,
-            step: 10,
+            step: 200,
             unit: "kg",
             type: .slider,
-            defaultSliderValue: 1240,
+            defaultSliderValue: 1200,
             section: .primary
         ),
         .init(
@@ -123,38 +123,6 @@ extension ParameterPage {
             unit: "",
             type: .slider,
             defaultSliderValue: 0.6,
-            section: .advanced
-        ),
-        .init(
-            id: "brakeResponseTime",
-            sidebarTitle: "Brake Response Time",
-            title: "Brake Response Time",
-            description: "Brake response time indicates delay from pedal input to effective braking force generation.",
-            sliderHint: "Smaller response time means faster brake system reaction.",
-            imageName: "timer",
-            imageURL: nil,
-            minValue: 0.05,
-            maxValue: 0.3,
-            step: 0.01,
-            unit: "s",
-            type: .slider,
-            defaultSliderValue: 0.25,
-            section: .advanced
-        ),
-        .init(
-            id: "abs",
-            sidebarTitle: "ABS",
-            title: "ABS",
-            description: "Enable ABS to prevent wheel lock-up during heavy braking input.",
-            sliderHint: "ABS modulates braking force to help maintain steerability while braking.",
-            imageName: "switch.2",
-            imageURL: nil,
-            minValue: nil,
-            maxValue: nil,
-            step: nil,
-            unit: "",
-            type: .toggle,
-            defaultSliderValue: nil,
             section: .advanced
         )
     ]
