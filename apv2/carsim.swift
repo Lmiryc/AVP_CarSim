@@ -44,6 +44,7 @@ struct CarSimulationView: View {
     @State private var mapAnchor = Entity()
     @State private var planeAnchor: AnchorEntity?
     @State private var frames: [CarFrame] = []
+    @State private var pendingStartAnimation = false
     
     // 动画与暂停状态
     @State private var isPlaying = false
@@ -125,9 +126,13 @@ struct CarSimulationView: View {
             }
             .onChange(of: appModel.shouldStartAnimation) { _, newValue in
                 if newValue {
-                    appModel.shouldStartAnimation = false
                     if !frames.isEmpty && !isPlaying {
+                        appModel.shouldStartAnimation = false
+                        pendingStartAnimation = false
                         startAnimation()
+                    } else {
+                        // Don't drop the trigger if CSV hasn't finished loading yet.
+                        pendingStartAnimation = true
                     }
                 }
             }
@@ -324,9 +329,7 @@ struct CarSimulationView: View {
 
         let url =
             Bundle.main.url(forResource: fileName, withExtension: "csv", subdirectory: "racedataset") ??
-            Bundle.main.url(forResource: fileName, withExtension: nil, subdirectory: "racedataset") ??
             Bundle.main.url(forResource: fileName, withExtension: "csv") ??
-            Bundle.main.url(forResource: fileName, withExtension: nil) ??
             Bundle.main.bundleURL.appendingPathComponent("racedataset/\(fileName).csv")
 
         guard FileManager.default.fileExists(atPath: url.path) else {
@@ -501,6 +504,11 @@ struct CarSimulationView: View {
         
 
         print("🎉 大功告成！成功加载了 \(parsedFrames.count) 帧有效数据！")
+
+        if pendingStartAnimation, !isPlaying, !frames.isEmpty {
+            pendingStartAnimation = false
+            startAnimation()
+        }
     }
     
     private func startAnimation() {
